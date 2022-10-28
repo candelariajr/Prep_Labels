@@ -5,7 +5,7 @@ use prep_labels;
 # BEGIN DML
 
 create table if not exists color_scheme(
-    id int not null auto_increment primary key, 
+	id int not null auto_increment primary key, 
     scheme_name varchar(64) unique,
     hex_back_color char(6),
     hex_text_color char(6)
@@ -15,15 +15,15 @@ insert into color_scheme (id, scheme_name, hex_back_color, hex_text_color) value
 (-1, 'Unspecified Scheme', 'ffffff', '000000');
 
 create table if not exists label_categories(
-    id int not null auto_increment primary key,
+	id int not null auto_increment primary key,
     display_name varchar(64) not null unique,
     display_order int default 0,
-    hex_text_color char(6) default '000000', 
-    hex_text_background char(6) default 'ffffff',
+    -- hex_text_color char(6) default '000000', 
+    -- hex_text_background char(6) default 'ffffff',
     color_scheme int not null default -1 references color_scheme.id
 );
 create table if not exists prep_location(
-    id int not null auto_increment primary key, 
+	id int not null auto_increment primary key, 
     display_name varchar(64) unique,
     display_order int default 0,
     color_scheme int default -1 references color_scheme.id
@@ -33,7 +33,7 @@ insert into prep_location (id, display_name) values
 (id, 'Unspecified Location');
 
 create table if not exists label_data(
-    id int not null auto_increment primary key, 
+	id int not null auto_increment primary key, 
     display_order int default 0,
     label_name varchar(128) unique,
     label_category int not null references label_categoties.id,
@@ -41,7 +41,7 @@ create table if not exists label_data(
     thaw_hours int, 
     hold_time_hours int not null,
     hold_time_round_24 boolean default false,
-    color_scheme_override boolean default false, 
+	color_scheme_override boolean default false, 
     hex_back_color char(6) default '000000',
     hex_text_color char(6) default 'ffffff'
 );
@@ -89,11 +89,39 @@ insert into label_data (label_name, label_category, thaw_hours, hold_time_hours,
 # DEMONSTRATION OF OPERATIONAL DATA FUNCTIONALITY
 
 select
-    label_categories.id,
-    label_categories.display_name, 
+	label_categories.id,
+	label_categories.display_name, 
     color_scheme.hex_back_color as background_color, 
     color_scheme.hex_text_color as text_color 
 from 
-    label_categories left outer join color_scheme on label_categories.color_scheme = color_scheme.id 
+	label_categories left outer join color_scheme on label_categories.color_scheme = color_scheme.id 
 order by 
-    label_categories.display_order asc;
+	label_categories.display_order asc;
+    
+    
+create view display_panel as     
+select 
+	label_data.id, 
+    label_categories.display_name,
+    label_data.label_name,
+    case
+		when label_data.color_scheme_override = 1 THEN
+			label_data.hex_back_color
+		else
+			color_scheme.hex_back_color
+		end
+	as hex_back_color,
+	case
+		when label_data.color_scheme_override = 1 THEN
+			label_data.hex_text_color
+		else
+			color_scheme.hex_text_color
+		end
+	as hex_text_color
+from
+	label_data left outer join label_categories on label_data.label_category = label_categories.id
+    left outer join color_scheme on color_scheme.id = label_categories.color_scheme
+order by
+	label_categories.display_order asc, 
+    label_data.display_order asc,
+    label_name asc;
